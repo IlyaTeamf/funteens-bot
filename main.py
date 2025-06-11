@@ -36,7 +36,8 @@ def setup_webhook():
             raise ValueError("Некорректный RENDER_EXTERNAL_URL")
         webhook_url = f"{RENDER_EXTERNAL_URL}{TELEGRAM_TOKEN}"
         bot.remove_webhook()
-        bot.set_webhook(url=webhook_url)
+print("Webhook URL:", webhook_url)
+bot.set_webhook(url=webhook_url)
         return f"Webhook set to {webhook_url}", 200
     except Exception as e:
         return f"Ошибка установки webhook: {str(e)}", 500
