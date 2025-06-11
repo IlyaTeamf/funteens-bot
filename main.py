@@ -9,7 +9,7 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("ASSISTANT_ID")
-RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
 
 openai.api_key = OPENAI_API_KEY
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -31,10 +31,15 @@ def receive_update():
 
 @app.route("/")
 def setup_webhook():
-    webhook_url = f"{RENDER_EXTERNAL_URL}{TELEGRAM_TOKEN}"
-    bot.remove_webhook()
-    bot.set_webhook(url=webhook_url)
-    return f"Webhook set to {webhook_url}", 200
+    try:
+        if not RENDER_EXTERNAL_URL or "http" not in RENDER_EXTERNAL_URL:
+            raise ValueError("Некорректный RENDER_EXTERNAL_URL")
+        webhook_url = f"{RENDER_EXTERNAL_URL}{TELEGRAM_TOKEN}"
+        bot.remove_webhook()
+        bot.set_webhook(url=webhook_url)
+        return f"Webhook set to {webhook_url}", 200
+    except Exception as e:
+        return f"Ошибка установки webhook: {str(e)}", 500
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
