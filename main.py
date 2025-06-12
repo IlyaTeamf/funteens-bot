@@ -26,7 +26,9 @@ def load_runtime_prompt():
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def receive_update():
     json_string = request.get_data().decode("utf-8")
+    print("📨 RAW JSON:", json_string)
     update = telebot.types.Update.de_json(json_string)
+    print("📦 UPDATE PARSED:", update)
     bot.process_new_updates([update])
     return "!", 200
 
