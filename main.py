@@ -36,8 +36,8 @@ def setup_webhook():
         if not RENDER_EXTERNAL_URL or "http" not in RENDER_EXTERNAL_URL:
             raise ValueError(f"Некорректный RENDER_EXTERNAL_URL: '{RENDER_EXTERNAL_URL}'")
 
-        webhook_url = f"{RENDER_EXTERNAL_URL}{TELEGRAM_TOKEN}"
-        print("🔥 FINAL WEBHOOK URL:", webhook_url)
+        webhook_url = f"{RENDER_EXTERNAL_URL.rstrip('/')}/{TELEGRAM_TOKEN}"
+        print("🔥 FINAL FIXED WEBHOOK URL:", webhook_url)
         bot.remove_webhook()
         bot.set_webhook(url=webhook_url)
         return f"Webhook set to {webhook_url}", 200
