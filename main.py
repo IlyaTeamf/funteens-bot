@@ -49,10 +49,12 @@ def setup_webhook():
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_input = message.text
+    print("📝 Получен запрос:", user_input)
     prompt = load_runtime_prompt()
 
     try:
         thread = openai.beta.threads.create()
+        print("📥 Thread создан:", thread.id)
 
         openai.beta.threads.messages.create(
             thread_id=thread.id,
@@ -74,6 +76,7 @@ def handle_message(message):
             if status.status == "completed":
                 break
             elif status.status == "failed":
+                print("❌ Запуск провалился.")
                 bot.send_message(message.chat.id, "Упс! Что-то пошло не так.")
                 return
             import time
@@ -89,6 +92,7 @@ def handle_message(message):
         bot.send_message(message.chat.id, "Не удалось получить ответ.")
 
     except Exception as e:
+        print("💥 Ошибка в handle_message:", e)
         bot.send_message(message.chat.id, "Ошибка: попробуй ещё раз позже.")
         print("Ошибка:", e)
 
