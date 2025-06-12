@@ -29,7 +29,7 @@ def receive_update():
     print("📨 RAW JSON:", json_string)
     update = telebot.types.Update.de_json(json_string)
     print("📦 UPDATE TYPE:", type(update))
-    print("📬 PARSED:", update.to_dict())
+    print("📬 PARSED:", update)
     bot.process_new_updates([update])
     return "!", 200
 
