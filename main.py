@@ -28,7 +28,8 @@ def receive_update():
     json_string = request.get_data().decode("utf-8")
     print("📨 RAW JSON:", json_string)
     update = telebot.types.Update.de_json(json_string)
-    print("📦 UPDATE PARSED:", update)
+    print("📦 UPDATE TYPE:", type(update))
+    print("📬 PARSED:", update.to_dict())
     bot.process_new_updates([update])
     return "!", 200
 
