@@ -10,6 +10,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("ASSISTANT_ID")
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
+print("🧪 Получен URL:", repr(RENDER_EXTERNAL_URL))
 
 openai.api_key = OPENAI_API_KEY
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
