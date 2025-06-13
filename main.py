@@ -1,103 +1,78 @@
-import openai
-import telebot
 import os
+import telebot
+import time
+import traceback
 from flask import Flask, request
+from openai import OpenAI
 
-from dotenv import load_dotenv
-load_dotenv()
-
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+# Переменные окружения
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ASSISTANT_ID = os.getenv("ASSISTANT_ID")
-RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
-print("🧪 Получен URL:", repr(RENDER_EXTERNAL_URL))
 
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-def load_runtime_prompt():
-    try:
-        with open("runtime_core_v2.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    except:
-        return "Ты — Funteens. Объясняй как бро, не как бот."
-
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
-def receive_update():
+def webhook():
     json_string = request.get_data().decode("utf-8")
-    print("📨 RAW JSON:", json_string)
     update = telebot.types.Update.de_json(json_string)
-    print("📦 UPDATE TYPE:", type(update))
-    print("📬 PARSED:", update)
     bot.process_new_updates([update])
     return "!", 200
 
-@app.route("/")
-def setup_webhook():
-    try:
-        if not RENDER_EXTERNAL_URL or "http" not in RENDER_EXTERNAL_URL:
-            raise ValueError(f"Некорректный RENDER_EXTERNAL_URL: '{RENDER_EXTERNAL_URL}'")
-
-        webhook_url = f"{RENDER_EXTERNAL_URL.rstrip('/')}/{TELEGRAM_TOKEN}"
-        print("🔥 FINAL FIXED WEBHOOK URL:", webhook_url)
-        bot.remove_webhook()
-        bot.set_webhook(url=webhook_url)
-        return f"Webhook set to {webhook_url}", 200
-
-    except Exception as e:
-        print("💥 Ошибка при установке webhook:", str(e))
-        return f"Ошибка установки webhook: {str(e)}", 500
+@app.route("/", methods=["GET"])
+def index():
+    return "Funteens bot is running!", 200
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_input = message.text
-    print("📝 Получен запрос:", user_input)
-    prompt = load_runtime_prompt()
+    print("📨 Пришёл запрос:", user_input)
 
     try:
-        thread = openai.beta.threads.create()
-        print("📥 Thread создан:", thread.id)
+        thread = client.beta.threads.create()
+        print("🧵 Thread создан:", thread.id)
 
-        openai.beta.threads.messages.create(
+        client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=user_input
         )
+        print("📨 Сообщение отправлено в OpenAI.")
 
-        run = openai.beta.threads.runs.create(
+        run = client.beta.threads.runs.create(
             thread_id=thread.id,
-            assistant_id=ASSISTANT_ID,
-            instructions=prompt
+            assistant_id=ASSISTANT_ID
         )
+        print("🚀 Run запущен:", run.id)
 
-        while True:
-            status = openai.beta.threads.runs.retrieve(
-                thread_id=thread.id,
-                run_id=run.id
-            )
+        # Ожидаем выполнения
+        for _ in range(10):
+            status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+            print("🔄 Статус выполнения:", status.status)
+
             if status.status == "completed":
-                break
+                messages = client.beta.threads.messages.list(thread_id=thread.id)
+                response_text = messages.data[0].content[0].text.value
+                print("✅ Ответ от ассистента:", response_text)
+                bot.send_message(message.chat.id, response_text)
+                return
             elif status.status == "failed":
                 print("❌ Запуск провалился.")
                 bot.send_message(message.chat.id, "Упс! Что-то пошло не так.")
                 return
-            import time
-            time.sleep(1.5)
 
-        messages = openai.beta.threads.messages.list(thread_id=thread.id)
-        for msg in messages.data:
-            if msg.role == "assistant":
-                text = msg.content[0].text.value
-                bot.send_message(message.chat.id, text)
-                return
+            time.sleep(1)
 
-        bot.send_message(message.chat.id, "Не удалось получить ответ.")
-
+        bot.send_message(message.chat.id, "Ответ не готов. Попробуй ещё раз.")
     except Exception as e:
         print("💥 Ошибка в handle_message:", e)
+        traceback.print_exc()
         bot.send_message(message.chat.id, "Ошибка: попробуй ещё раз позже.")
-        print("Ошибка:", e)
 
+# Запуск
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{os.getenv('RENDER_EXTERNAL_URL')}{TELEGRAM_TOKEN}")
+    app.run(host="0.0.0.0", port=10000)
